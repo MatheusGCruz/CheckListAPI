@@ -31,13 +31,17 @@ public class CheckListsController {
 	@Autowired
 	private CheckedItemRepository checkedItemRepository;
 	@Autowired
-	private ActiveTokenRepository activeTokenRepository;
+	private ChecklistTokenRepository activeTokenRepository;
+	@Autowired
+	private ChecklistUsersRepository checklistUsersRepository;
+	
+	
 	
 	private final CheckListService checkListService = new CheckListService();
 	
 	@GetMapping
 	public List<ChecklistName> getAllListNames(@RequestHeader("token") String token) {
-		ActiveToken activeToken = activeTokenRepository.findByToken(token);
+		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
 		try {				
 			return checklistNameRepository.findAllByOwnerId(activeToken.getUserId());
 		}
@@ -48,7 +52,7 @@ public class CheckListsController {
 	
 	@PostMapping("/addList")
 	public ChecklistName addListName(@RequestHeader("token") String token, @RequestBody ChecklistName checklistName, HttpServletResponse response) {
-		ActiveToken activeToken = activeTokenRepository.findByToken(token);
+		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
 		try {
 			checklistName.setOwnerId(activeToken.getUserId());
 			checklistName.setCreatedAt(LocalDateTime.now());
@@ -64,7 +68,7 @@ public class CheckListsController {
 	
 	@PostMapping("/addItem")
 	public ChecklistItem addItem(@RequestHeader("token") String token, @RequestBody ChecklistItem checklistItem, HttpServletResponse response) {
-		ActiveToken activeToken = activeTokenRepository.findByToken(token);
+		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
 		try {
 			Optional<ChecklistName> checklistName = checklistNameRepository.findById(Long.valueOf(checklistItem.getChecklistId()));
 			checklistItem.setChecklistId(checklistItem.getChecklistId());
@@ -82,7 +86,7 @@ public class CheckListsController {
 	}
 	
 	@PostMapping("/createToken")
-	public String createToken(@RequestHeader("hash") String hash, @RequestBody ActiveToken newToken) {			
+	public String createToken(@RequestHeader("hash") String hash, @RequestBody ChecklistToken newToken) {			
 		
 		String validDateToHash = LocalDate.now().atStartOfDay().toString();
 		String validHash = BCrypt.withDefaults().hashToString(12, validDateToHash.toCharArray());		
@@ -92,7 +96,7 @@ public class CheckListsController {
 			newToken.setCreatedAt(LocalDateTime.now());
 			newToken.setExpiresAt(LocalDateTime.now().plusHours(4));
 			newToken.setToken(DigestUtils.md5DigestAsHex(tokenSeed.getBytes()).toUpperCase());			
-			ActiveToken returnToken = activeTokenRepository.save(newToken);		
+			ChecklistToken returnToken = activeTokenRepository.save(newToken);		
 			return returnToken.getToken();
 		}
 		else {
@@ -110,7 +114,7 @@ public class CheckListsController {
 	
 	@GetMapping("/getCheckList")
 	public List<Checklist> getCheckList(@RequestHeader("token") String token, HttpServletResponse response) {
-		ActiveToken activeToken = activeTokenRepository.findByToken(token);
+		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
 		List<Checklist> checklists = new ArrayList<Checklist>();
 		try {
 			List<ChecklistName> checklistNames = checklistNameRepository.findAllByOwnerId(activeToken.getUserId());
@@ -118,7 +122,7 @@ public class CheckListsController {
 			for(ChecklistName checklistName : checklistNames) {
 				Checklist checklist = new Checklist();
 				checklist.setListName(checklistName);
-				checklist.setChecklistItems(checklistItemRepository.findAllByChecklistId(checklist.getListName().getId()));
+				//checklist.setChecklistItems(checklistItemRepository.findAllByChecklistId(checklist.getListName().getId()));
 				//checklist.setCheckedItems(checkedItemRepository.findAllByChecklistId(checklist.getListName().getId()));
 				checklists.add(checklist);
 				
@@ -134,6 +138,61 @@ public class CheckListsController {
 
 		}
 	}
+	
+	@PostMapping("/shareList")
+	private String shareList(@RequestHeader("token") String token, @RequestBody ChecklistName checklist, HttpServletResponse response) {
+		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
+		String pinCode = Auxiliary.generatePinCode();
+		ChecklistUsers newChecklistUser = new ChecklistUsers();
+		try {
+			ChecklistName targetChecklist = checklistNameRepository.findByIdAndOwnerId(checklist.getId(), activeToken.getUserId());
+			newChecklistUser = checkListService.generateChecklistUser(targetChecklist, pinCode);
+			//checklistUsersRepository.save(newChecklistUser);
+			response.setStatus(201);
+			return pinCode;
+			
+		}
+		catch(Exception ex) {
+			System.out.println(ex);
+			response.setStatus(401);
+			return null;
+		}
+	
+	}
+	
+	@GetMapping("/addList")
+	private String addList(@RequestHeader("token") String token, @RequestHeader("pinCode") String pinCode, HttpServletResponse response) {
+		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
+		try {
+			String hashedPin = DigestUtils.md5DigestAsHex(pinCode.getBytes()).toUpperCase();
+			ChecklistUsers checklistUser = checklistUsersRepository.findByGeneratedPin(hashedPin);
+			
+			if(checklistUser.getOwnerId() == activeToken.getUserId()) {
+				response.setStatus(401);					
+				return "User already is the Owner of the list";
+			}
+						
+			else if(null == checklistUser.getUserId()) {
+				checklistUser.setUserId(activeToken.getUserId());
+				checklistUsersRepository.save(checklistUser);
+				response.setStatus(201);					
+				return "User added to List";
+			}
+			else {
+				response.setStatus(401);					
+				return "Pincode Already used";
+			}
+
+			
+		}
+		catch(Exception ex) {
+			System.out.println(ex);
+			response.setStatus(404);
+			return "Pincode incorrect";
+		}
+	
+	}
+	
 	
 	
 	

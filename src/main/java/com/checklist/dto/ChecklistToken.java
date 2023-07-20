@@ -7,7 +7,7 @@ import lombok.Data;
 
 @Data
 @Entity
-public class ActiveToken {
+public class ChecklistToken {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
