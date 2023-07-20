@@ -1,0 +1,76 @@
+wget https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.11/bin/apache-tomcat-10.1.11.tar.gz
+
+tar -xzvf apache-tomcat-10.1.11.tar.gz
+
+sudo mv apache-tomcat-10.1.11 /usr/local/tomcat10
+
+vi ~/.bashrc
+
+Add the following lines to the end of the file:
+
+
+export CATALINA_HOME=/usr/local/tomcat10
+export PATH=$PATH:$CATALINA_HOME/bin
+
+
+sudo apt-get update
+sudo apt-get install openjdk-17-jdk
+sudo apt-get install openjdk-17-jre
+
+sudo vi /usr/local/tomcat10/conf/tomcat-users.xml
+
+<role rolename="manager-gui" />
+<user username="matheuskaze" password="{password}" roles="manager-gui" />
+
+<role rolename="admin-gui" />
+<user username="matheuskaze_admin" password="{password}" roles="manager-gui,admin-gui" />
+
+sudo vi /usr/local/tomcat10/webapps/manager/META-INF/context.xml
+sudo vi /usr/local/tomcat10/webapps/host-manager/META-INF/context.xml
+
+remove
+<!--  <Valve className="org.apache.catalina.valves.RemoteAddrValve"
+         allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" /> -->
+
+
+sudo /usr/local/tomcat10/bin/startup.sh
+sudo /usr/local/tomcat10/bin/shutdown.sh
+
+
+
+
+
+
+
+
+[Unit]
+Description=Tomcat
+After=network.target
+
+[Service]
+Type=forking
+
+User=tomcat
+Group=tomcat
+
+Environment="JAVA_HOME=/usr/lib/jvm/java-1.17.0-openjdk-amd64"
+Environment="JAVA_OPTS=-Djava.security.egd=file:///dev/urandom"
+Environment="CATALINA_BASE=/opt/tomcat"
+Environment="CATALINA_HOME=/opt/tomcat"
+Environment="CATALINA_PID=/opt/tomcat/temp/tomcat.pid"
+Environment="CATALINA_OPTS=-Xms512M -Xmx1024M -server -XX:+UseParallelGC"
+
+ExecStart=/opt/tomcat/bin/startup.sh
+ExecStop=/opt/tomcat/bin/shutdown.sh
+
+RestartSec=10
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+fonts: 
+https://saturncloud.io/blog/how-to-install-tomcat-in-amazon-web-services-ec2/
+https://www.digitalocean.com/community/tutorials/how-to-install-apache-tomcat-10-on-ubuntu-20-04
