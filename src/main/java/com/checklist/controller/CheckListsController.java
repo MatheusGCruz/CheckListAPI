@@ -122,10 +122,7 @@ public class CheckListsController {
 			for(ChecklistName checklistName : checklistNames) {
 				Checklist checklist = new Checklist();
 				checklist.setListName(checklistName);
-				//checklist.setChecklistItems(checklistItemRepository.findAllByChecklistId(checklist.getListName().getId()));
-				//checklist.setCheckedItems(checkedItemRepository.findAllByChecklistId(checklist.getListName().getId()));
 				checklists.add(checklist);
-				
 			}
 
 			response.setStatus(200);
@@ -135,9 +132,42 @@ public class CheckListsController {
 		catch(Exception ex) {
 			response.setStatus(401);
 			return List.of();
-
 		}
 	}
+	
+	@GetMapping("/getCheckListItems")
+	public List<ChecklistItem> getCheckListItems(@RequestHeader("token") String token, @RequestHeader("listId") int listId, HttpServletResponse response) {
+		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
+		List<ChecklistName> checklistNames = checklistNameRepository.findAllByOwnerId(activeToken.getUserId());	
+		List<ChecklistUsers> checklistAvaible = checklistUsersRepository.findAllByUserId(activeToken.getUserId()); 		
+		List<ChecklistItem> checklistItem = new ArrayList<ChecklistItem>();
+		
+		try {
+			for(ChecklistName checklistName : checklistNames) {
+				if(checklistName.getId() == listId) {
+					List<ChecklistItem> checklistItems = checklistItemRepository.findAllByChecklistId(listId);				
+					response.setStatus(200);
+					return checklistItems;
+				}
+			}
+			
+			for(ChecklistUsers checklistUsers : checklistAvaible) {
+				if(checklistUsers.getChecklistId() == listId) {
+					List<ChecklistItem> checklistItems = checklistItemRepository.findAllByChecklistId(listId);				
+					response.setStatus(200);
+					return checklistItems;
+				}
+
+			}
+			response.setStatus(401);
+			return List.of();			
+		}
+		catch(Exception ex) {
+			response.setStatus(401);
+			return List.of();
+		}
+	}
+	
 	
 	@PostMapping("/shareList")
 	private String shareList(@RequestHeader("token") String token, @RequestBody ChecklistName checklist, HttpServletResponse response) {
@@ -158,6 +188,56 @@ public class CheckListsController {
 			return null;
 		}
 	
+	}
+	
+	@GetMapping("/removeList")
+	private String removeList(@RequestHeader("token") String token, @RequestHeader("listId") int listId, HttpServletResponse response) {
+		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
+		try {
+			Optional<ChecklistName> checklistName = checklistNameRepository.findById((long) listId);
+			
+			if(checklistName.get().getOwnerId() == activeToken.getUserId()) {
+				checklistNameRepository.deleteById((long) listId);
+				response.setStatus(401);					
+				return "User already is the Owner of the list";
+			}
+						
+			else {
+				response.setStatus(401);					
+				return "Non authorized";
+			}			
+		}
+		catch(Exception ex) {
+			System.out.println(ex);
+			response.setStatus(500);
+			return "Non authorized";
+		}	
+	}
+	
+	@GetMapping("/removeItem")
+	private String removeItem(@RequestHeader("token") String token, @RequestHeader("listId") int listId, @RequestHeader("itemId") int itemId, HttpServletResponse response) {
+		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
+		try {
+			Optional<ChecklistName> checklistName = checklistNameRepository.findById((long) listId);
+			Optional<ChecklistItem> checklistItem = checklistItemRepository.findById((long) itemId);
+			
+			if(checklistName.get().getOwnerId() == activeToken.getUserId()
+					&& checklistName.get().getId()== checklistItem.get().getChecklistId()) {
+				checklistItemRepository.deleteById((long) itemId);
+				response.setStatus(401);					
+				return "User already is the Owner of the list";
+			}
+						
+			else {
+				response.setStatus(401);					
+				return "Non authorized";
+			}			
+		}
+		catch(Exception ex) {
+			System.out.println(ex);
+			response.setStatus(500);
+			return "Non authorized";
+		}	
 	}
 	
 	@GetMapping("/addList")

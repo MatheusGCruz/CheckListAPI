@@ -16,6 +16,10 @@ public class CheckedItem {
 	private Integer checklistItemId;
 	
 	@Column
+	private Integer checklistId;
+	
+	
+	@Column
 	private Integer userId;
 	
 	@Column

@@ -74,3 +74,15 @@ WantedBy=multi-user.target
 fonts: 
 https://saturncloud.io/blog/how-to-install-tomcat-in-amazon-web-services-ec2/
 https://www.digitalocean.com/community/tutorials/how-to-install-apache-tomcat-10-on-ubuntu-20-04
+
+
+
+
+export CATALINA_HOME=/usr/local/tomcat9
+export PATH=$PATH:$CATALINA_HOME/bin
+
+
+export ADMIN_USERNAME=matheuskaze_admin
+export RDS_PASSWORD=Antares00
+export RDS_URL=jdbc:sqlserver://checklists-controller.cntpcgbklx63.us-east-2.rds.amazonaws.com;databaseName=Checklist;encrypt=true;trustServerCertificate=true;
+export RDS_USERNAME=matheuskaze
