@@ -112,17 +112,42 @@ public class CheckListsController {
 		return BCrypt.withDefaults().hashToString(12, password.toCharArray());
 	}
 	
-	@GetMapping("/getCheckList")
-	public List<Checklist> getCheckList(@RequestHeader("token") String token, HttpServletResponse response) {
+	@GetMapping("/getOwnedCheckList")
+	public List<ChecklistName> getOwnedCheckList(@RequestHeader("token") String token, HttpServletResponse response) {
 		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
-		List<Checklist> checklists = new ArrayList<Checklist>();
+		List<ChecklistName> checklists = new ArrayList<ChecklistName>();
 		try {
 			List<ChecklistName> checklistNames = checklistNameRepository.findAllByOwnerId(activeToken.getUserId());
 			
 			for(ChecklistName checklistName : checklistNames) {
-				Checklist checklist = new Checklist();
-				checklist.setListName(checklistName);
-				checklists.add(checklist);
+				checklists.add(checklistName);
+			}
+
+			response.setStatus(200);
+			return checklists;
+			
+		}
+		catch(Exception ex) {
+			response.setStatus(401);
+			return List.of();
+		}
+	}
+	
+	@GetMapping("/getCheckList")
+	public List<ChecklistName> getCheckList (@RequestHeader("token") String token, HttpServletResponse response) {
+		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
+		List<ChecklistName> checklists = new ArrayList<ChecklistName>();
+		try {
+			List<ChecklistName> checklistNames = checklistNameRepository.findAllByOwnerId(activeToken.getUserId());
+			List<ChecklistUsers> checklistAvaible = checklistUsersRepository.findAllByUserId(activeToken.getUserId()); 	
+			
+			for(ChecklistName checklistName : checklistNames) {
+				checklists.add(checklistName);
+			}
+			
+			for(ChecklistUsers checklistUser : checklistAvaible) {
+				Optional<ChecklistName> checklistName = checklistNameRepository.findById((long) checklistUser.getChecklistId());
+				checklists.add(checklistName.get());
 			}
 
 			response.setStatus(200);
@@ -273,6 +298,45 @@ public class CheckListsController {
 	
 	}
 	
+	@PatchMapping("/checkItem")
+	private ChecklistItem checkItem(@RequestHeader("token") String token, @RequestBody ChecklistItem checklistItem, HttpServletResponse response) {
+		boolean isUserValid = false;
+		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
+		
+		List<ChecklistName> checklistNames = checklistNameRepository.findAllByOwnerId(activeToken.getUserId());	
+		List<ChecklistUsers> checklistAvaible = checklistUsersRepository.findAllByUserId(activeToken.getUserId()); 		
+		
+		try {
+			for(ChecklistName checklistName : checklistNames) {
+				if(checklistName.getId() == checklistItem.getChecklistId()) {
+					isUserValid = true;
+				}
+			}
+			
+			for(ChecklistUsers checklistUsers : checklistAvaible) {
+				if(checklistUsers.getChecklistId() == checklistItem.getChecklistId()) {
+					isUserValid = true;
+				}
+			}		
+		
+			if(isUserValid) {
+				checklistItem.setCheckedBy(activeToken.getUserId());
+				checklistItem.setCheckedAt(LocalDateTime.now());
+				response.setStatus(201);
+				return checklistItemRepository.save(checklistItem);			
+			}
+			else {
+				response.setStatus(401);
+				return null;
+			}
+			
+		}
+		catch(Exception ex) {
+			System.out.println(ex);
+			response.setStatus(401);
+			return null;
+		}	
+	}
 	
 	
 	
