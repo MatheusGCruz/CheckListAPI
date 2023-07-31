@@ -198,33 +198,85 @@ public class CheckListsController {
 	private String shareList(@RequestHeader("token") String token, @RequestBody ChecklistName checklist, HttpServletResponse response) {
 		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
 		String pinCode = Auxiliary.generatePinCode();
-		ChecklistUsers newChecklistUser = new ChecklistUsers();
+		ChecklistUsers savedChecklistUser = new ChecklistUsers();
+		List<ChecklistUsers> newChecklistUserList = new ArrayList<ChecklistUsers>();
 		try {
 			ChecklistName targetChecklist = checklistNameRepository.findByIdAndOwnerId(checklist.getId(), activeToken.getUserId());
-			newChecklistUser = checkListService.generateChecklistUser(targetChecklist, pinCode);
-			//checklistUsersRepository.save(newChecklistUser);
+			
+			newChecklistUserList = checklistUsersRepository.findAllByChecklistIdAndOwnerId(checklist.getId(), activeToken.getUserId());
+			
+			for(ChecklistUsers checklistUsers : newChecklistUserList) {
+				if(savedChecklistUser.getUserId() == null) {
+					savedChecklistUser = checklistUsers;
+				}
+			}			
+			
+			
+			if(savedChecklistUser.getGeneratedPin() == null) {
+				ChecklistUsers newChecklistUser = new ChecklistUsers();
+				
+				newChecklistUser.setChecklistId(targetChecklist.getId());
+				newChecklistUser.setOwnerId(targetChecklist.getOwnerId());
+				newChecklistUser.setCreatedAt(LocalDateTime.now());
+				newChecklistUser.setGeneratedPin(pinCode);		
+				
+				savedChecklistUser = checklistUsersRepository.save(newChecklistUser);
+			}	
+			
 			response.setStatus(201);
-			return pinCode;
+			return savedChecklistUser.getGeneratedPin();
 			
 		}
 		catch(Exception ex) {
 			System.out.println(ex);
 			response.setStatus(401);
 			return null;
-		}
-	
+		}	
 	}
+	
+	@GetMapping("/addSharedList")
+	private String addSharedList(@RequestHeader("token") String token, @RequestHeader("pinCode") String pinCode, HttpServletResponse response) {
+		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
+		ChecklistUsers savedChecklistUser = new ChecklistUsers();
+		try {			
+			savedChecklistUser = checklistUsersRepository.findByGeneratedPin(pinCode);		
+			
+			if(savedChecklistUser.getOwnerId() == activeToken.getUserId()) {
+				response.setStatus(401);					
+				return "User already is the Owner of the list";
+			}
+			
+			if(savedChecklistUser.getGeneratedPin() != null && savedChecklistUser.getUserId() == null) {
+				savedChecklistUser.setUserId(activeToken.getUserId());				
+				checklistUsersRepository.save(savedChecklistUser);
+				response.setStatus(201);
+				return savedChecklistUser.getGeneratedPin();				
+			}	
+			
+			response.setStatus(401);
+			return null;
+			
+		}
+		catch(Exception ex) {
+			System.out.println(ex);
+			response.setStatus(401);
+			return null;
+		}	
+	}
+	
 	
 	@GetMapping("/removeList")
 	private String removeList(@RequestHeader("token") String token, @RequestHeader("listId") int listId, HttpServletResponse response) {
+		
 		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
 		try {
 			Optional<ChecklistName> checklistName = checklistNameRepository.findById((long) listId);
 			
 			if(checklistName.get().getOwnerId() == activeToken.getUserId()) {
 				checklistNameRepository.deleteById((long) listId);
-				response.setStatus(401);					
-				return "User already is the Owner of the list";
+				checklistItemRepository.deleteByChecklistId((long) listId);				
+				response.setStatus(200);					
+				return "List Deleted";
 			}
 						
 			else {
@@ -239,66 +291,8 @@ public class CheckListsController {
 		}	
 	}
 	
-	@GetMapping("/removeItem")
-	private String removeItem(@RequestHeader("token") String token, @RequestHeader("listId") int listId, @RequestHeader("itemId") int itemId, HttpServletResponse response) {
-		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
-		try {
-			Optional<ChecklistName> checklistName = checklistNameRepository.findById((long) listId);
-			Optional<ChecklistItem> checklistItem = checklistItemRepository.findById((long) itemId);
-			
-			if(checklistName.get().getOwnerId() == activeToken.getUserId()
-					&& checklistName.get().getId()== checklistItem.get().getChecklistId()) {
-				checklistItemRepository.deleteById((long) itemId);
-				response.setStatus(401);					
-				return "User already is the Owner of the list";
-			}
-						
-			else {
-				response.setStatus(401);					
-				return "Non authorized";
-			}			
-		}
-		catch(Exception ex) {
-			System.out.println(ex);
-			response.setStatus(500);
-			return "Non authorized";
-		}	
-	}
 	
-	@GetMapping("/addList")
-	private String addList(@RequestHeader("token") String token, @RequestHeader("pinCode") String pinCode, HttpServletResponse response) {
-		ChecklistToken activeToken = activeTokenRepository.findByToken(token);
-		try {
-			String hashedPin = DigestUtils.md5DigestAsHex(pinCode.getBytes()).toUpperCase();
-			ChecklistUsers checklistUser = checklistUsersRepository.findByGeneratedPin(hashedPin);
-			
-			if(checklistUser.getOwnerId() == activeToken.getUserId()) {
-				response.setStatus(401);					
-				return "User already is the Owner of the list";
-			}
-						
-			else if(null == checklistUser.getUserId()) {
-				checklistUser.setUserId(activeToken.getUserId());
-				checklistUsersRepository.save(checklistUser);
-				response.setStatus(201);					
-				return "User added to List";
-			}
-			else {
-				response.setStatus(401);					
-				return "Pincode Already used";
-			}
-
-			
-		}
-		catch(Exception ex) {
-			System.out.println(ex);
-			response.setStatus(404);
-			return "Pincode incorrect";
-		}
-	
-	}
-	
-	@PatchMapping("/checkItem")
+	@PostMapping("/checkItem")
 	private ChecklistItem checkItem(@RequestHeader("token") String token, @RequestBody ChecklistItem checklistItem, HttpServletResponse response) {
 		boolean isUserValid = false;
 		ChecklistToken activeToken = activeTokenRepository.findByToken(token);

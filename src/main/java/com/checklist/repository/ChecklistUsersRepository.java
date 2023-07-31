@@ -14,5 +14,9 @@ public interface ChecklistUsersRepository  extends JpaRepository<ChecklistUsers,
 	ChecklistUsers findByGeneratedPin(String hashedPin);
 
 	List<ChecklistUsers> findAllByUserId(Integer userId);
+
+	ChecklistUsers findByChecklistIdAndOwnerId(Integer id, Integer userId);
+
+	List<ChecklistUsers> findAllByChecklistIdAndOwnerId(Integer id, Integer userId);
 	
 }

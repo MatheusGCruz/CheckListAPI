@@ -23,9 +23,7 @@ public class CheckListService {
 		newChecklistUser.setChecklistId(targetChecklist.getId());
 		newChecklistUser.setOwnerId(targetChecklist.getOwnerId());
 		newChecklistUser.setCreatedAt(LocalDateTime.now());
-		newChecklistUser.setGeneratedPin(DigestUtils.md5DigestAsHex(pinCode.getBytes()).toUpperCase());
-		
-		
+		newChecklistUser.setGeneratedPin(DigestUtils.md5DigestAsHex(pinCode.getBytes()).toUpperCase());		
 		
 		return checklistUsersRepository.save(newChecklistUser);
 	}

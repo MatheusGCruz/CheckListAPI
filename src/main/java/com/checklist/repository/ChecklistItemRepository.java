@@ -12,4 +12,6 @@ public interface ChecklistItemRepository extends JpaRepository<ChecklistItem, Lo
 
 	List<ChecklistItem> findAllByChecklistId(Integer checklistId);
 
+	void deleteByChecklistId(long itemId);
+
 }
