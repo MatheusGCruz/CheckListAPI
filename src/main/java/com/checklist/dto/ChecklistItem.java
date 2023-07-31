@@ -31,6 +31,12 @@ public class ChecklistItem {
 	@Column
 	private Integer ownerId;
 	
+	@Column
+	private LocalDateTime checkedAt;
+	
+	@Column
+	private Integer checkedBy;
+	
 	
 	
 }

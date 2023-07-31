@@ -12,5 +12,7 @@ public interface ChecklistNameRepository extends JpaRepository<ChecklistName, Lo
 
 	List<ChecklistName> findAllByOwnerId(int ownerId);
 
+	ChecklistName findByIdAndOwnerId(int Id, int ownerId);
+
 
 }

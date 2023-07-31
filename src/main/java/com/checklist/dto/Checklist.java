@@ -12,7 +12,6 @@ import lombok.Data;
 public class Checklist {
 	private ChecklistName listName;
 	
-	private List<ChecklistItem> checklistItems;
-	private List<CheckedItem> CheckedItems;
+	private List<CheckItemList> checklistItems;
 	
 }
