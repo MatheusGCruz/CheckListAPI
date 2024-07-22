@@ -81,8 +81,66 @@ https://www.digitalocean.com/community/tutorials/how-to-install-apache-tomcat-10
 export CATALINA_HOME=/usr/local/tomcat9
 export PATH=$PATH:$CATALINA_HOME/bin
 
+sudo vi /usr/local/tomcat10/bin/setenv.sh
 
-export ADMIN_USERNAME=matheuskaze_admin
-export RDS_PASSWORD=Antares00
-export RDS_URL=jdbc:sqlserver://checklists-controller.cntpcgbklx63.us-east-2.rds.amazonaws.com;databaseName=Checklist;encrypt=true;trustServerCertificate=true;
-export RDS_USERNAME=matheuskaze
+
+
+
+
+
+
+sudo chown tomcat:tomcat -R /usr/local/tomcat10/bin/setenv.sh
+
+
+
+
+
+
+Once you login in to the AWS instance from terminal, switch to root user by executing following command.
+sudo su -
+2. Navigate to etc/init.d directory by executing following command.
+
+cd /etc/init.d
+3. Now create an init script with name tomcat9 (depends on your tomcat version, if your using tomcat 8 name the script as tomcat8) in etc/init.d directory.
+
+Note: Do not append .sh to tomcat9 file
+
+4. Now do a vi on tomcat9 file with the following command
+
+vi tomcat9
+5. Add the contents of the below mentioned code in tomcat9 script
+
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:        tomcat9
+# Required-Start:  $network
+# Required-Stop:   $network
+# Default-Start:   2 3 4 5
+# Default-Stop:    0 1 6
+# Short-Description: Start/Stop Tomcat server
+### END INIT INFO
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+start() {
+ sh /usr/share/tomcat9/bin/startup.sh
+}
+
+stop() {
+ sh /usr/share/tomcat9/bin/shutdown.sh
+}
+
+case $1 in
+  start|stop) $1;;
+  restart) stop; start;;
+  *) echo "Run as $0 &lt;start|stop|restart&gt;"; exit 1;;
+esac
+
+Note: Ensure you have same tomcat installation folder path at line 15 and 19
+
+6. Change the permissions tomcat9 file by executing following commands.
+
+chmod 755 /etc/init.d/tomcat9
+update-rc.d tomcat9 defaults
+With this tomcat will automatically start on instance bootup !!!
